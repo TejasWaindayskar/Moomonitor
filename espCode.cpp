@@ -21,8 +21,8 @@ void onBeatDetected()
     Serial.println("Beat!");
 }
 // Network credentials
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
+const char* ssid = "student-OptiPlex-3000";
+const char* password = "1234abcd";
 
 // Initialize DHT sensor
 DHT dht(DHTPIN, DHTTYPE);
@@ -36,7 +36,8 @@ float humidity = 0.0;
 
 void setup() {
   Serial.begin(115200);
-  
+  Wire.begin(21, 22); // SDA on GPIO21, SCL on GPIO22
+
   // Initialize DHT sensor
   dht.begin();
 
@@ -52,35 +53,35 @@ void setup() {
   // Define the web server route
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = "<html><body>";
-    html += "<h1>DHT11 Sensor Data</h1>";
+    // html += "<h1>Sensor Data</h1>";
     html += "<p>Temperature: " + String(temperature) + " &deg;C</p>";
-    html += "<p>Humidity: " + String(humidity) + " %</p>";
+    // html += "<p>Humidity: " + String(humidity) + " %</p>";
+    // html += "<p>Heart Rate: " + String(pox.getHeartRate()) + " bpm</p>";
+    // html += "<p>SpO2: " + String(pox.getSpO2()) + " %</p>";
     html += "</body></html>";
     request->send(200, "text/html", html);
-  });
-
-  // Start the server
-  server.begin();
+});
   //Pulse Oximeter Setup
-      Serial.begin(9600);
 
-    Serial.print("Initializing pulse oximeter..");
+    // Serial.print("Initializing pulse oximeter..");
 
-    // Initialize sensor
-    if (!pox.begin()) {
-        Serial.println("FAILED");
-        for(;;);
-    } else {
-        Serial.println("SUCCESS");
-    }
+    // // Initialize sensor
+    // if (!pox.begin()) {
+    //     Serial.println("FAILED");
+    //     for(;;){
+    //       Serial.println("EXIT");}
+    // } else {
+    //     Serial.println("SUCCESS");
+    // }
 
-	// Configure sensor to use 7.6mA for LED drive
-	pox.setIRLedCurrent(MAX30100_LED_CURR_7_6MA);
+  // Configure sensor to use 7.6mA for LED drive
+//   pox.setIRLedCurrent(MAX30100_LED_CURR_7_6MA);
 
-    // Register a callback routine
-    pox.setOnBeatDetectedCallback(onBeatDetected);
+//     // Register a callback routine
+//     pox.setOnBeatDetectedCallback(onBeatDetected);
   
-   pinMode(sensorPin, INPUT); //vibration sensor
+//    pinMode(sensorPin, INPUT); //vibration sensor
+// 
 }
 
 void loop() {
@@ -107,25 +108,25 @@ void loop() {
 
   // Pulse-Oximeter code
       // Read from the sensor
-    pox.update();
+  //   pox.update();
 
-    // Grab the updated heart rate and SpO2 levels
-    if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
-        Serial.print("Heart rate:");
-        Serial.print(pox.getHeartRate());
-        Serial.print("bpm / SpO2:");
-        Serial.print(pox.getSpO2());
-        Serial.println("%");
+  //   // Grab the updated heart rate and SpO2 levels
+  //   if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
+  //       Serial.print("Heart rate:");
+  //       Serial.print(pox.getHeartRate());
+  //       Serial.print("bpm / SpO2:");
+  //       Serial.print(pox.getSpO2());
+  //       Serial.println("%");
 
-        tsLastReport = millis();
-    }
+  //       tsLastReport = millis();
+  //   }
    
-    if (digitalRead(sensorPin)) {               // Check if there is any vibration detected by the sensor
-    Serial.println("Animal moving....");
-    } 
-  else {
-    Serial.println("Stationary");  // Print "..." other wise
-  }
+  //   if (digitalRead(sensorPin)) {               // Check if there is any vibration detected by the sensor
+  //   Serial.println("Animal moving....");
+  //   } 
+  // else {
+  //   Serial.println("Stationary");  // Print "..." other wise
+  // }
 
   // Add a delay to avoid flooding the serial monitor
   delay(1000);
