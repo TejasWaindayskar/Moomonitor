@@ -25,7 +25,6 @@ const char* password = "your-PASSWORD";
 AsyncWebServer server(80);
 
 // Variables for sensor readings
-float temperature = 0.0;
 float heartRate = 0.0;
 float spo2 = 0.0;
 
@@ -62,7 +61,6 @@ void setup() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         String html = "<html><body>";
         html += "<h1>ESP32-CAM Sensor Data</h1>";
-        html += "<p>Temperature: " + String(temperature) + " °C</p>";
         html += "<p>Heart Rate: " + String(heartRate) + " bpm</p>";
         html += "<p>SpO2: " + String(spo2) + " %</p>";
         html += "</body></html>";
@@ -79,13 +77,8 @@ void loop() {
 
     // Check if reporting period has elapsed
     if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
-        temperature = pox.getTemperature(); // Get temperature from MAX30100
         heartRate = pox.getHeartRate(); // Get heart rate
         spo2 = pox.getSpO2(); // Get SpO2
-
-        Serial.print("Temperature: ");
-        Serial.print(temperature);
-        Serial.println(" °C");
 
         Serial.print("Heart Rate: ");
         Serial.print(heartRate);
