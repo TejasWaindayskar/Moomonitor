@@ -1,85 +1,72 @@
 #include <WiFi.h>
-#include <ESPAsyncWebSrv.h>
 #include <Wire.h>
+#include <HTTPClient.h>
 #include "MAX30100_PulseOximeter.h"
 
 #define REPORTING_PERIOD_MS 1000
-const int vibrationSensorPin = 15; // GPIO15 for vibration sensor
+#define VIBRATION_PIN 15  // GPIO15 for vibration sensor
 
-// Create a PulseOximeter object
+// WiFi credentials
+const char* ssid = "your-SSID";  // Replace with your WiFi name
+const char* password = "your-PASSWORD";  // Replace with your WiFi password
+
+// ThingSpeak API details
+const char* server = "http://api.thingspeak.com/update";
+const char* apiKey = "your-THINGSPEAK-API-KEY";  // Replace with your ThingSpeak API key
+
 PulseOximeter pox;
-
-// Time at which the last beat occurred
 uint32_t tsLastReport = 0;
+float heartRate = 0.0;
+float spo2 = 0.0;
 
-// Callback routine executed when a pulse is detected
+// Callback for pulse detection
 void onBeatDetected() {
     Serial.println("Beat detected!");
 }
 
-// Network credentials
-const char* ssid = "your-SSID";
-const char* password = "your-PASSWORD";
-
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
-
-// Variables for sensor readings
-float heartRate = 0.0;
-float spo2 = 0.0;
-
 void setup() {
     Serial.begin(115200);
-    Wire.begin(14, 2); // SDA on GPIO14, SCL on GPIO2 (ESP32-CAM I2C)
 
-    // Initialize Pulse Oximeter
+    // Initialize Wi-Fi
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.print(".");
+    }
+    Serial.println("\nConnected to WiFi");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    // Initialize MAX30100
+    Wire.begin(14, 2);  // SDA on GPIO14, SCL on GPIO2
     Serial.println("Initializing MAX30100...");
     if (!pox.begin()) {
-        Serial.println("Failed to initialize MAX30100!");
-        while (true); // Halt if initialization fails
+        Serial.println("Failed to initialize MAX30100! Halting...");
+        while (true);
     }
-    Serial.println("MAX30100 initialized successfully!");
+    Serial.println("MAX30100 initialized.");
     pox.setOnBeatDetectedCallback(onBeatDetected);
 
     // Set IR LED current
     pox.setIRLedCurrent(MAX30100_LED_CURR_7_6MA);
 
-    // Set up the vibration sensor pin
-    pinMode(vibrationSensorPin, INPUT);
-
-    // Connect to Wi-Fi
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // Web server route
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        String html = "<html><body>";
-        html += "<h1>ESP32-CAM Sensor Data</h1>";
-        html += "<p>Heart Rate: " + String(heartRate) + " bpm</p>";
-        html += "<p>SpO2: " + String(spo2) + " %</p>";
-        html += "</body></html>";
-        request->send(200, "text/html", html);
-    });
-
-    // Start the web server
-    server.begin();
+    // Vibration sensor pin setup
+    pinMode(VIBRATION_PIN, INPUT);
 }
 
 void loop() {
-    // Update MAX30100 readings
+    // Update MAX30100
     pox.update();
 
     // Check if reporting period has elapsed
     if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
-        heartRate = pox.getHeartRate(); // Get heart rate
-        spo2 = pox.getSpO2(); // Get SpO2
+        // Get readings
+        heartRate = pox.getHeartRate();
+        spo2 = pox.getSpO2();
+        bool isMoving = digitalRead(VIBRATION_PIN);
 
+        // Print sensor data
         Serial.print("Heart Rate: ");
         Serial.print(heartRate);
         Serial.println(" bpm");
@@ -88,15 +75,37 @@ void loop() {
         Serial.print(spo2);
         Serial.println(" %");
 
+        Serial.print("Vibration: ");
+        Serial.println(isMoving ? "Moving" : "Stationary");
+
+        // Send data to ThingSpeak
+        sendToThingSpeak(heartRate, spo2, isMoving);
+
         tsLastReport = millis();
     }
 
-    // Vibration sensor check
-    if (digitalRead(vibrationSensorPin)) {
-        Serial.println("Animal moving...");
-    } else {
-        Serial.println("Stationary");
-    }
+    delay(500);
+}
 
-    delay(1000);
+void sendToThingSpeak(float heartRate, float spo2, bool isMoving) {
+    if (WiFi.status() == WL_CONNECTED) {
+        HTTPClient http;
+        String url = String(server) + "?api_key=" + apiKey +
+                     "&field1=" + String(heartRate) +
+                     "&field2=" + String(spo2) +
+                     "&field3=" + String(isMoving);
+        http.begin(url);
+
+        int httpResponseCode = http.GET();
+        if (httpResponseCode > 0) {
+            Serial.print("ThingSpeak response: ");
+            Serial.println(httpResponseCode);
+        } else {
+            Serial.print("Error connecting to ThingSpeak: ");
+            Serial.println(httpResponseCode);
+        }
+        http.end();
+    } else {
+        Serial.println("WiFi not connected. Skipping ThingSpeak update.");
+    }
 }
