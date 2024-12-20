@@ -7,12 +7,12 @@
 #define VIBRATION_PIN 15  // GPIO15 for vibration sensor
 
 // WiFi credentials
-const char* ssid = "your-SSID";  // Replace with your WiFi name
-const char* password = "your-PASSWORD";  // Replace with your WiFi password
+const char* ssid = "Tejas";  // Replace with your WiFi name
+const char* password = "1234abcd";  // Replace with your WiFi password
 
 // ThingSpeak API details
 const char* server = "http://api.thingspeak.com/update";
-const char* apiKey = "your-THINGSPEAK-API-KEY";  // Replace with your ThingSpeak API key
+const char* apiKey = "RGQU89W5D3J8XDV6";  // Replace with your ThingSpeak API key
 
 PulseOximeter pox;
 uint32_t tsLastReport = 0;
